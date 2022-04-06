@@ -9,10 +9,17 @@ Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
 #define SERVOMAX  490 // This is the 'maximum' pulse length count (out of 4096)
 #define USMIN  SERVOMIN*4 // 600, This is the rounded 'minimum' microsecond length based on the minimum pulse of 150
 #define USMAX  SERVOMAX*4 // 2400, This is the rounded 'maximum' microsecond length based on the maximum pulse of 600
-#define SERVO_FREQ 50 // Analog servos run at ~50 Hz updates
+#define SERVO_FREQ 50 // Analog servos run at ~50 Hz updates\
 
-// our servo # counter
-uint8_t servonum = 0;
+#define MAX_DELAY 500 // Slowest speed of motor
+#define MIN_DELAY 10 // Fastest speed of motor
+
+const int servonum0 = 0;
+const int servonum1 = 1;
+int angleX = 90;
+int angleY = 90;
+int pulselenX = map(angleX, 0, 180, SERVOMIN, SERVOMAX);
+int pulselenY = map(angleY, 0, 180, SERVOMIN, SERVOMAX);
 
 //FSR
 #define FORCE_SENSOR_PIN A0 // the FSR and 10K pulldown are connected to A0
@@ -28,14 +35,19 @@ const int forceReadThres = 500;
 int xValue;
 int yValue;
 
-const int x_0 = 510;
-const int y_0 = 489;
+const int x_0 = 1024/2;
+const int y_0 = 1024/2;
+const int joyMax = 1024;
+const int joyMin = 0;
+const int joyBuffer = 30;
 
-const int threshold_dif = 100;
+int delay_speed_X = map(x_0, x_0, joyMax, MAX_DELAY, MIN_DELAY);
+int delay_speed_Y = map(y_0, y_0, joyMax, MAX_DELAY, MIN_DELAY);
 
-int pulselenX = SERVOMIN;
-int pulselenY = SERVOMIN;
-int pulselen = SERVOMIN;
+int countX = 0;
+int countY = 0;
+
+int joyStick = 0;
 
 void setup() {
   Serial.begin(9600); //how fast it reads every byte (bytes per second)
@@ -44,41 +56,74 @@ void setup() {
   pwm.setOscillatorFrequency(25250000);
   pwm.setPWMFreq(SERVO_FREQ);  // Analog servos run at ~50 Hz updates
 
-  //Set to specific angle
-  pulselen = SERVOMAX; //MAX extend at 290
-  pwm.setPWM(servonum=0, 0, pulselen);
-  
-  delay(10);
+  pwm.setPWM(servonum0, 0, pulselenX);
+  pwm.setPWM(servonum1, 0, pulselenY);
+  delay(20);
 }
 
 void loop() {
-//  for (uint16_t pulselen = SERVOMIN; pulselen < SERVOMAX; pulselen++) {
-//    pwm.setPWM(servonum=0, 0, pulselen);
-//    pwm.setPWM(servonum=1, 0, pulselen);
-//    forceRead = analogRead(FORCE_SENSOR_PIN);
-//    force = forceConvert(forceRead);
-//    Serial.println (force);
-//    delay(100);
-//  }
-//  delay(500);
-//  for (uint16_t pulselen = SERVOMAX; pulselen > SERVOMIN; pulselen--) {
-//    pwm.setPWM(servonum=0, 0, pulselen);
-//    pwm.setPWM(servonum=1, 0, pulselen);
-//    forceRead = analogRead(FORCE_SENSOR_PIN);
-//    force = forceConvert(forceRead);
-//    Serial.println (force);
-//    delay(100);
-//  }
-
+  // Read Force values
+  forceRead = analogRead(FORCE_SENSOR_PIN);
+  force = forceConvert(forceRead);
+  
+  // Read Joystick values
   xValue = analogRead(joyX);
   yValue = analogRead(joyY);
-  
-  if (xValue > x_0 + threshold_dif && xValue < SERVOMAX){
-    pulselen++;
-  } else if (xValue < x_0 - threshold_dif && xValue > SERVOMIN){
-    pulselen--;
+
+  // Control Motors
+  if(countX == 0){
+    if (xValue > (x_0 + joyBuffer)){
+      if (pulselenX<SERVOMAX){
+        pulselenX++;
+        countX = map(xValue, x_0, joyMax, MAX_DELAY, MIN_DELAY);
+      }
+    }else if(xValue < (x_0 - joyBuffer)){
+      if (pulselenX>SERVOMIN){
+        pulselenX--;
+        countX = map(xValue, x_0, joyMin, MAX_DELAY, MIN_DELAY);
+      }
+    } 
+    pwm.setPWM(servonum0, 0, pulselenX);
+  } else {
+    countX--;
   }
-  Serial.println(pulselen);
+
+  if(countY == 0){
+    if (yValue > (y_0 + joyBuffer)){
+      if (pulselenY<SERVOMAX){
+        pulselenY++;
+        countY = map(yValue, y_0, joyMax, MAX_DELAY, MIN_DELAY);
+      }
+    }else if(yValue < (y_0 - joyBuffer)){
+      if (pulselenY>SERVOMIN){
+        pulselenY--;
+        countY = map(yValue, y_0, joyMin, MAX_DELAY, MIN_DELAY);
+      }
+    } 
+    pwm.setPWM(servonum1, 0, pulselenY);
+  } else {
+    countY--;
+  }
+
+  // Print to Serial
+//  Serial.print(xValue);
+//  Serial.print("\t");
+//  Serial.print(yValue);
+  
+//  Serial.print("\t");
+//  Serial.print(pulselenX);
+  angleX = map(pulselenX, SERVOMIN, SERVOMAX, 0, 180);
+//  Serial.print("\t");
+  Serial.print(angleX);
+
+//  Serial.print("\t");
+//  Serial.print(pulselenY);
+  angleY = map(pulselenY, SERVOMIN, SERVOMAX, 0, 180);
+  Serial.print("\t");
+  Serial.print(angleY);
+
+  Serial.print("\t");
+  Serial.println(force);
 }
 
 float forceConvert(int forceRead){

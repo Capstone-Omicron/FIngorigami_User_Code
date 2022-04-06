@@ -9,6 +9,12 @@ from prompt_user import*
 import os
 import datetime
 
+#CHANGE HERE
+folder_out_path = "C:/Users/HanNguyen/UBC/BMEG 457 001 2021W1-2 Biomedical Engineering Design Project - Team ο - Neuroprosthetic Fingers - Team ο - Neuroprosthetic Fingers/Tasks/Data/EMG/20220307_EMG_2xMyoware_Feather_GelElectrode"
+COM_num = 4
+baud_rate = 115200
+
+
 def is_float(element) -> bool:
     try:
         float(element)
@@ -18,9 +24,6 @@ def is_float(element) -> bool:
 
 def read_serial():
     # set up the serial line
-    COM_num = 4
-    baud_rate = 115200
-
     ser = serial.Serial('COM'+str(COM_num), baud_rate)
     ser.flushInput()
 
@@ -43,9 +46,9 @@ def read_serial():
             break
     return data
 
-def write_file(data):
-    folder_out_path = "C:/Users/HanNguyen/UBC/BMEG 457 001 2021W1-2 Biomedical Engineering Design Project - Team ο - Neuroprosthetic Fingers - Team ο - Neuroprosthetic Fingers/Tasks/Data/EMG/20220307_EMG_2xMyoware_Feather_GelElectrode"
+def write_file(data):  
     print(folder_out_path)
+    
     #Write the data to a .txt file
     time_now = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
     file_name = "EMG_data_" + str(time_now) +".txt"
